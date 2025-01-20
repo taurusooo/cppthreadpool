@@ -1,7 +1,7 @@
 # cppthreadpool线程池库
 
 ## 一、简介
-`cppthreadpool`是一个用C++11编写的header-only线程池库，具备任务提交、结果获取、回调处理以及动态线程管理等功能，实现十分优雅便捷。
+`cppthreadpool`是一个用C++11编写的header-only线程池库，具备任务提交、结果获取、回调处理以及动态线程管理等功能，实现优雅便捷。
 
 ## 二、功能特点
 1. **任务提交多样化**：支持不带回调和带回调两种方式提交任务。
@@ -20,9 +20,6 @@
 
 #### 1. 不使用回调提交任务
 ```cpp
-#include "cppthreadpool.h"
-#include <iostream>
-
 int main()
 {
     cppthreadpool::ThreadPool pool(4);
@@ -43,11 +40,9 @@ int main()
     return 0;
 }
 ```
-#### 2. 使用回调提交任务
+#### 2. 配合回调提交任务
+**tip：callback形参数可接收来自task的返回数据**
 ```cpp
-#include "cppthreadpool.h"
-#include <iostream>
-
 void callback(int value)
 {
     std::cout << "Callback received value: " << value << std::endl;
@@ -75,9 +70,8 @@ int main()
 }
 ```
 ### 引用捕获和与引用传参
-tip：由于std::shared_future.get特性 callback中不支持接受引用数据, 如若操控共享数据可进行传址
+**tip：由于std::futuret特性 callback 目前不支持接受引用参数, 如若操控共享数据可进行lambda引用捕获或者传址**
 ```cpp
-
 void printMessage(const std::string& message) 
 {
      std::cout << "Message: " << message << std::endl;
