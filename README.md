@@ -1,4 +1,4 @@
-# cppthreadpool线程池库
+# cppthreadpool
 
 ## 一、简介
 `cppthreadpool`是一个用C++11编写的header-only线程池库，具备任务提交、结果获取、回调处理以及动态线程管理等功能，实现优雅便捷。
@@ -22,7 +22,8 @@
 ```cpp
 int main()
 {
-    cppthreadpool::ThreadPool pool(4);
+    // 线程数量4-8
+    cppthreadpool::ThreadPool pool(4, 8);
     auto result = pool.submit([]()
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -50,6 +51,7 @@ void callback(int value)
 
 int main()
 {
+    // 线程数量 4-4
     cppthreadpool::ThreadPool pool(4);
     auto result = pool.submit([]()
     {
