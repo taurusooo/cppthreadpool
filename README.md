@@ -4,10 +4,9 @@
 `cppthreadpool`是一个用C++11编写的header-only线程池库，具备任务提交、结果获取、回调处理以及动态线程管理等功能，实现优雅便捷。
 
 ## 二、功能特点
-1. **任务提交多样化**：支持不带回调和带回调两种方式提交任务。
-2. **返回值获取**：能够方便地通过`std::shared_future`获取任务执行后的返回值 。
-3. **动态线程管理**：根据任务负载动态调整线程数量，优化资源利用和性能。
-4. **线程安全保障**：运用`std::mutex`和`std::condition_variable`等机制，确保线程安全。
+1. **任务提交简洁**：支持不带回调和带回调两种方式提交任务。
+2. **返回值获取**：通过`std::shared_future`获取任务执行后的返回值 。
+3. **动态线程管理**：根据任务负载动态调整线程数量。
 
 
 ## 三、使用方法
@@ -72,7 +71,12 @@ int main()
 }
 ```
 ### 引用捕获和与引用传参
-**tip：由于std::futuret特性 callback 目前不支持接受引用参数, 如若操控共享数据可进行lambda引用捕获或者传址**
+**Tip**: 当回调函数接受来自task的引用类型时，需要显式指定task返回值类型以用于模板类型推导。
+
+    Example of task that returns a reference to a callback:
+        1. string& fun(string& msg) { return msg; }
+        2. [](string& msg) ->string& { return msg; }
+
 ```cpp
 void printMessage(const std::string& message) 
 {
@@ -86,7 +90,7 @@ int main()
     printMessage(message);
 
     cppthreadpool::ThreadPool pool(4);
-    // 使用 [] 捕获引用
+    // task or callback 使用 [] 捕获引用
     auto result = pool.submit([&message]() 
     {
         message = "Modified in lambda";
@@ -103,7 +107,7 @@ int main()
     else
         std::cout << "Task submission failed" << std::endl;
 
-    // 使用 std::ref 传递参数
+    // 使用 std::ref 传递引用
     auto refResult = pool.submit([](std::string& msg) 
     {
         msg = "Modified in lambda with std::ref";
@@ -118,6 +122,29 @@ int main()
     }
     else
         std::cout << "Task with std::ref submission failed" << std::endl;
+
+    pool.shutdown();
+    return 0;
+
+    // callback获取task返回的引用
+    auto callbackResult = pool.submit([](std::string& msg)->std::string &
+    {
+        return msg;
+    },[](std::string &msg)
+    {
+        msg = "Modified in lambda with callback";
+    }
+    , std::ref(message));
+
+    
+    if (callbackResult.success)
+    {
+        callbackResult.future.wait();
+        std::cout << "Task with callbackResult completed successfully" << std::endl;
+        printMessage(message);
+    }
+    else
+        std::cout << "Task with callbackResult submission failed" << std::endl;
 
     pool.shutdown();
     return 0;
