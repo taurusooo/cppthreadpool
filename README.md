@@ -41,7 +41,7 @@ int main()
 }
 ```
 #### 2. 配合回调提交任务
-**tip：callback形参数可接收来自task的返回数据**
+**tip：callback形参数可接收来自task的返回数据,并在task所在线程进行处理**
 ```cpp
 void callback(int value)
 {
