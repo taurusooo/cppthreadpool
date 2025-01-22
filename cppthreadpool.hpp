@@ -5,7 +5,6 @@
 #include <functional>
 #include <future>
 #include <vector>
-#include <memory>
 #include <atomic>
 #include <iostream>
 
@@ -32,14 +31,18 @@ namespace cppthreadpool
         // 析构函数：确保所有任务完成，并等待线程退出
         ~ThreadPool();
 
+       // 提交任务到线程池，返回一个 std::future，用于获取任务结果，不带回调
+        template <typename Func, typename... Args>
+        SubmitResult<decltype(std::declval<Func>()(std::declval<Args>()...))> submit(Func&& func, Args&&... args);
+
         // 提交任务到线程池，返回一个 std::future，用于获取任务结果，带回调
         template <typename Func, typename Callback, typename... Args>
-        SubmitResult<typename std::result_of<Func(Args...)>::type> submit(Func&& func, Callback&& callback, Args&&... args);
-        // 提交任务到线程池，返回一个 std::future，用于获取任务结果，不带回调
-        template <typename Func, typename... Args>
-        SubmitResult<typename std::result_of<Func(Args...)>::type> submit(Func&& func, Args&&... args);
+        SubmitResult<decltype(std::declval<Func>()(std::declval<Args>()...))> submit(Func&& func, Callback&& callback, Args&&... args);
+
         // 停止接受新任务，并等待所有已提交任务完成
         void shutdown();
+        // 等待所有任务完成
+        void wait();
 
     private:
         // 每个工作线程执行的函数
@@ -119,11 +122,19 @@ namespace cppthreadpool
 
     }
 
-    // 析构函数实现
     ThreadPool::~ThreadPool()
     {
-        // 调用 shutdown 方法停止线程池
+        // 停止线程池,销毁所有线程
         shutdown();
+    }
+
+    void ThreadPool::wait()
+    {
+        // 等待所有工作线程完成
+        while (m_currentFreeThreadCount != m_threads.size())
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
     }
 
     // 停止接受新任务，并等待所有已提交任务完成
@@ -151,7 +162,7 @@ namespace cppthreadpool
             }
         }
         m_threads.clear();
-        std::cout << "cppthreadpoool shutdown sucess" << std::endl;
+        // std::cout << "cppthreadpoool shutdown sucess" << std::endl;
     }
 
     // 通用模板：处理非 void 类型
@@ -199,10 +210,10 @@ namespace cppthreadpool
 
     // 修改 submit 函数带回调
     template <typename Func, typename Callback, typename... Args>
-    SubmitResult<typename std::result_of<Func(Args...)>::type> ThreadPool::submit(
+    SubmitResult<decltype(std::declval<Func>()(std::declval<Args>()...))> ThreadPool::submit(
         Func&& func, Callback&& callback, Args&&... args)
     {
-        using ReturnType = typename std::result_of<Func(Args...)>::type;
+        using ReturnType = decltype(std::declval<Func>()(std::declval<Args>()...));
 
         try
         {
@@ -245,7 +256,7 @@ namespace cppthreadpool
 
             m_condition.notify_one();  // 通知工作线程
 
-            return {result, true};  // 返回 future 和成功标志
+            return {std::move(result), true};  //显式移动,优化shared_future引用计数维护开销
         }
         catch (...)
         {
@@ -253,13 +264,12 @@ namespace cppthreadpool
         }
     }
 
-    // 修改 submit 函数不带回调
+   // 修改 submit 函数不带回调
     template <typename Func, typename... Args>
-    SubmitResult<typename std::result_of<Func(Args...)>::type> ThreadPool::submit(
+    SubmitResult<decltype(std::declval<Func>()(std::declval<Args>()...))> ThreadPool::submit(
         Func&& func, Args&&... args)
     {
-        using ReturnType = typename std::result_of<Func(Args...)>::type;
-
+        using ReturnType = decltype(std::declval<Func>()(std::declval<Args>()...));
         try
         {
             // 创建一个 packaged_task 来封装任务，并返回一个 future
@@ -284,7 +294,7 @@ namespace cppthreadpool
             // 通知一个工作线程处理新任务
             m_condition.notify_one();
 
-            return {result, true};  // 返回 future 和成功标志
+            return {std::move(result), true};  // 返回 future 和成功标志
         }
         catch (...)
         {
