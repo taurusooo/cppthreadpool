@@ -44,6 +44,7 @@ namespace cppthreadpool
         // 等待所有任务完成
         void wait();
 
+        inline int getRunningThreadCount() const;
     private:
         // 每个工作线程执行的函数
         void workerThread();
@@ -163,6 +164,11 @@ namespace cppthreadpool
         }
         m_threads.clear();
         // std::cout << "cppthreadpoool shutdown sucess" << std::endl;
+    }
+
+    int ThreadPool::getRunningThreadCount() const
+    {
+        return m_threads.size() - m_currentFreeThreadCount;
     }
 
     // 通用模板：处理非 void 类型
